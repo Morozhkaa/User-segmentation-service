@@ -1,0 +1,243 @@
+basePath: /api/v1
+definitions:
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.Segment:
+    properties:
+      slug:
+        example: AVITO_VOICE_MESSAGES
+        type: string
+    type: object
+  models.SegmentsList:
+    properties:
+      segments:
+        items:
+          type: string
+        type: array
+    type: object
+  models.SuccessResponse:
+    properties:
+      success:
+        type: string
+    type: object
+  models.UpdateRequest:
+    properties:
+      segments-to-add:
+        items:
+          type: string
+        type: array
+      segments-to-remove:
+        items:
+          type: string
+        type: array
+    type: object
+host: localhost:3000
+info:
+  contact:
+    email: olenka.shishkina.02@mail.ru
+    name: Olga Shishkina
+  description: A service that stores a user and the segments they belong to.
+  title: User Segmentation service API
+  version: "1.0"
+paths:
+  /createSegment:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new segment with the given slug. If this segment was
+        already in the database, return the BadRequest status.
+      operationId: createSegment
+      parameters:
+      - description: 'A short name containing only letters, numbers, underscores,
+          or hyphens. Format: ^[\w-]+$'
+        in: body
+        name: slug
+        required: true
+        schema:
+          $ref: '#/definitions/models.Segment'
+      responses:
+        "201":
+          description: Segment created successfully.
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Segment already exists / missing required 'slug' parameter
+            / invalid format of 'slug' parameter.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Database error / Internal Server Error.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new segment
+      tags:
+      - segment
+  /deleteSegment:
+    delete:
+      consumes:
+      - application/json
+      description: Delete the segment with the given slug and all users from it.
+      operationId: deleteSegment
+      parameters:
+      - description: 'A short name containing only letters, numbers, underscores,
+          or hyphens. Format: ^[\w-]+$'
+        in: body
+        name: slug
+        required: true
+        schema:
+          $ref: '#/definitions/models.Segment'
+      responses:
+        "200":
+          description: Segment deleted successfully.
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Missing required 'slug' parameter / invalid format of 'slug'
+            parameter.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Segment with the given slug not found.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Database error / Internal Server Error.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete segment
+      tags:
+      - segment
+  /getReport/{period}:
+    get:
+      consumes:
+      - application/json
+      description: Returns the history of events for the given month as a csv file.
+      operationId: getReport
+      parameters:
+      - description: Month for which you want to display information, in the format
+          'yyyy-mm'
+        in: path
+        name: period
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: Report file received successfully.
+        "400":
+          description: Invalid format for parameter 'period'.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Database error / Internal Server Error.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get report file
+      tags:
+      - report
+  /getUserReport/{period}/{userID}:
+    get:
+      consumes:
+      - application/json
+      description: Returns a specific user's history of events for the specified month
+        as a csv file.
+      operationId: getUserReport
+      parameters:
+      - description: Month for which you want to display information, in the format
+          'yyyy-mm'
+        in: path
+        name: period
+        required: true
+        type: string
+      - description: User ID in uuid format
+        format: uuid
+        in: path
+        name: userID
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: Report file received successfully.
+        "400":
+          description: Invalid format for parameter 'period'.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Database error / Internal Server Error.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get a report file for a specific user
+      tags:
+      - report
+  /getUserSegments/{userID}:
+    get:
+      description: Return the list of segments the user is a member of.
+      operationId: getSegments
+      parameters:
+      - description: User ID in uuid format
+        format: uuid
+        in: path
+        name: userID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: User segments received successfully.
+          schema:
+            $ref: '#/definitions/models.SegmentsList'
+        "400":
+          description: Invalid format for parameter 'userID'.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Database error / Internal Server Error.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get user segments
+      tags:
+      - segment
+  /updateUserSegments/{userID}:
+    post:
+      consumes:
+      - application/json
+      description: Add/remove a user from segments in accordance with the transferred
+        lists for adding and deleting.
+      operationId: updateSegments
+      parameters:
+      - description: User ID in uuid format
+        format: uuid
+        in: path
+        name: userID
+        required: true
+        type: string
+      - description: segments
+        in: body
+        name: segments
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateRequest'
+      responses:
+        "200":
+          description: User information updated successfully.
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "400":
+          description: Invalid format for parameter 'userID'.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Database error / Internal Server Error.
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update user segments
+      tags:
+      - segment
+schemes:
+- http
+swagger: "2.0"
