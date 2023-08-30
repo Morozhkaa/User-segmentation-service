@@ -100,7 +100,11 @@ func (a *Adapter) updateSegments(ctx *gin.Context) {
 		return
 	}
 	var data models.UpdateRequest
-	ctx.BindJSON(&data)
+	err = ctx.BindJSON(&data)
+	if err != nil {
+		a.ErrorHandler(ctx, models.ErrBadRequest)
+		return
+	}
 
 	err = a.segmentSvc.UpdateUserSegments(ctx, data, user_id)
 	if err != nil {
