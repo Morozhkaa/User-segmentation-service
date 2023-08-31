@@ -1,10 +1,9 @@
 // The usecases package implements the application's business logic. Since the functions are simple
-// and no preliminary preparation is required before working with data, we immediately call the storage methods.
+// and there is almost no preliminary preparation before working with data, we immediately call the storage methods.
+// It seems that testing can be neglected.
 package usecases
 
 import (
-	"context"
-	"encoding/csv"
 	"fmt"
 	"segmentation-service/internal/domain/models"
 	"segmentation-service/internal/ports"
@@ -25,8 +24,8 @@ func New(storage ports.SegmentStorage) *SegmentSvc {
 	}
 }
 
-func (a *SegmentSvc) CreateSegment(ctx context.Context, slug string) error {
-	count, err := a.storage.FindSegment(ctx, slug)
+func (a *SegmentSvc) CreateSegment(slug string) error {
+	count, err := a.storage.FindSegment(slug)
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
 	}
@@ -34,50 +33,50 @@ func (a *SegmentSvc) CreateSegment(ctx context.Context, slug string) error {
 		return models.ErrSegmentAlreadyExists
 	}
 
-	err = a.storage.SaveSegment(ctx, slug)
+	err = a.storage.SaveSegment(slug)
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
 	}
 	return nil
 }
 
-func (a *SegmentSvc) DeleteSegment(ctx context.Context, slug string) error {
-	count, err := a.storage.FindSegment(ctx, slug)
+func (a *SegmentSvc) DeleteSegment(slug string) error {
+	count, err := a.storage.FindSegment(slug)
 	if err != nil {
 		return err
 	}
 	if count == 0 {
 		return models.ErrSegmentNotFound
 	}
-	err = a.storage.DeleteSegment(ctx, slug)
+	err = a.storage.DeleteSegment(slug)
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
 	}
 	return nil
 }
 
-func (a *SegmentSvc) UpdateUserSegments(ctx context.Context, data models.UpdateRequest, userID uuid.UUID) error {
-	return a.storage.UpdateUserSegments(ctx, data, userID)
+func (a *SegmentSvc) UpdateUserSegments(data models.UpdateRequest, userID uuid.UUID) error {
+	return a.storage.UpdateUserSegments(data, userID)
 }
 
-func (a *SegmentSvc) GetUserSegments(ctx context.Context, userID uuid.UUID) (models.SegmentsList, error) {
-	return a.storage.GetUserSegments(ctx, userID)
+func (a *SegmentSvc) GetUserSegments(userID uuid.UUID) (models.SegmentsList, error) {
+	return a.storage.GetUserSegments(userID)
 }
 
-func (a *SegmentSvc) GetReport(ctx context.Context, period string, wr *csv.Writer) error {
+func (a *SegmentSvc) GetReport(period string) ([][]string, error) {
 	monthBeginning := period + "-01"
-	records, err := a.storage.GetReport(ctx, monthBeginning)
+	records, err := a.storage.GetReport(monthBeginning)
 	if err != nil {
-		return err
+		return records, err
 	}
-	return wr.WriteAll(records)
+	return records, nil
 }
 
-func (a *SegmentSvc) GetUserReport(ctx context.Context, period string, userID uuid.UUID, wr *csv.Writer) error {
+func (a *SegmentSvc) GetUserReport(period string, userID uuid.UUID) ([][]string, error) {
 	monthBeginning := period + "-01"
-	records, err := a.storage.GetUserReport(ctx, monthBeginning, userID)
+	records, err := a.storage.GetUserReport(monthBeginning, userID)
 	if err != nil {
-		return err
+		return records, err
 	}
-	return wr.WriteAll(records)
+	return records, nil
 }
