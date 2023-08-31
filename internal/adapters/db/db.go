@@ -20,6 +20,7 @@ type DBStorage struct {
 }
 
 var _ ports.SegmentStorage = (*DBStorage)(nil)
+var ctx = context.Background()
 
 // New establishes one connection and returns a new instance of DBStorage.
 func New(ctx context.Context, conn string) (*DBStorage, error) {
@@ -33,7 +34,7 @@ func New(ctx context.Context, conn string) (*DBStorage, error) {
 	}, nil
 }
 
-func (db *DBStorage) FindSegment(ctx context.Context, slug string) (count int, err error) {
+func (db *DBStorage) FindSegment(slug string) (count int, err error) {
 	const query = `
 	SELECT COUNT(*) FROM segments WHERE name = $1;
 	`
@@ -41,7 +42,7 @@ func (db *DBStorage) FindSegment(ctx context.Context, slug string) (count int, e
 	return count, err
 }
 
-func (db *DBStorage) SaveSegment(ctx context.Context, slug string) (err error) {
+func (db *DBStorage) SaveSegment(slug string) (err error) {
 	const query = `
 	INSERT INTO segments (name) VALUES ($1);
 	`
@@ -50,7 +51,7 @@ func (db *DBStorage) SaveSegment(ctx context.Context, slug string) (err error) {
 }
 
 // DeleteSegment removes a segment and all users from it.
-func (db *DBStorage) DeleteSegment(ctx context.Context, slug string) (err error) {
+func (db *DBStorage) DeleteSegment(slug string) (err error) {
 	// start a transaction
 	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
@@ -84,7 +85,7 @@ func (db *DBStorage) DeleteSegment(ctx context.Context, slug string) (err error)
 }
 
 // UpdateUserSegments adds and removes segments from a user. If one of the segments is not in the database, an error will be returned.
-func (db *DBStorage) UpdateUserSegments(ctx context.Context, data models.UpdateRequest, userID uuid.UUID) error {
+func (db *DBStorage) UpdateUserSegments(data models.UpdateRequest, userID uuid.UUID) error {
 	// start a transaction
 	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
@@ -178,7 +179,7 @@ func (db *DBStorage) UpdateUserSegments(ctx context.Context, data models.UpdateR
 }
 
 // GetUserSegments returns all segments the user is a member of.
-func (db *DBStorage) GetUserSegments(ctx context.Context, userID uuid.UUID) (models.SegmentsList, error) {
+func (db *DBStorage) GetUserSegments(userID uuid.UUID) (models.SegmentsList, error) {
 	segments := models.SegmentsList{}
 	const query = `
 	SELECT segments.name FROM segments
@@ -200,7 +201,7 @@ func (db *DBStorage) GetUserSegments(ctx context.Context, userID uuid.UUID) (mod
 }
 
 // GetMonthlyReport returns all entries about adding / removing users from segments for the specified month (in the format: yyyy-mm).
-func (db *DBStorage) GetReport(ctx context.Context, period string) ([][]string, error) {
+func (db *DBStorage) GetReport(period string) ([][]string, error) {
 	var result [][]string
 
 	const queryCheck = `
@@ -231,7 +232,7 @@ func (db *DBStorage) GetReport(ctx context.Context, period string) ([][]string, 
 }
 
 // GetMonthlyReport returns all entries about adding / removing users from segments for the specified month (in the format: yyyy-mm).
-func (db *DBStorage) GetUserReport(ctx context.Context, period string, userID uuid.UUID) ([][]string, error) {
+func (db *DBStorage) GetUserReport(period string, userID uuid.UUID) ([][]string, error) {
 	var result [][]string
 
 	const queryCheck = `
