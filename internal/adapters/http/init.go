@@ -27,6 +27,12 @@ type AdapterOptions struct {
 	IdleTimeout time.Duration
 }
 
+var router *gin.Engine
+
+func GetRouter() *gin.Engine {
+	return router
+}
+
 // New instantiates the adapter.
 func New(segmentService ports.SegmentService, opts AdapterOptions) (*Adapter, error) {
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", opts.HTTP_port))
@@ -34,7 +40,7 @@ func New(segmentService ports.SegmentService, opts AdapterOptions) (*Adapter, er
 		return nil, fmt.Errorf("server start failed: %w", err)
 	}
 
-	router := gin.Default()
+	router = gin.Default()
 	server := http.Server{
 		Handler:      router,
 		ReadTimeout:  opts.Timeout,

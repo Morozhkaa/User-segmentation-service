@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"segmentation-service/internal/domain/models"
+	"segmentation-service/pkg/infra/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -34,13 +35,13 @@ func (a *Adapter) createSegment(ctx *gin.Context) {
 		return
 	}
 
-	err = a.segmentSvc.CreateSegment(ctx, segment.Slug)
+	err = a.segmentSvc.CreateSegment(segment.Slug)
 	if err != nil {
 		a.ErrorHandler(ctx, err)
 		return
 	}
 
-	ctx.IndentedJSON(
+	ctx.JSON(
 		http.StatusCreated,
 		models.SuccessResponse{SuccessMsg: fmt.Sprintf("segment with slug '%s' created", segment.Slug)},
 	)
@@ -70,13 +71,13 @@ func (a *Adapter) deleteSegment(ctx *gin.Context) {
 		return
 	}
 
-	err = a.segmentSvc.DeleteSegment(ctx, segment.Slug)
+	err = a.segmentSvc.DeleteSegment(segment.Slug)
 	if err != nil {
 		a.ErrorHandler(ctx, err)
 		return
 	}
 
-	ctx.IndentedJSON(
+	ctx.JSON(
 		http.StatusOK,
 		models.SuccessResponse{SuccessMsg: fmt.Sprintf("segment with slug '%s' deleted", segment.Slug)},
 	)
@@ -106,12 +107,12 @@ func (a *Adapter) updateSegments(ctx *gin.Context) {
 		return
 	}
 
-	err = a.segmentSvc.UpdateUserSegments(ctx, data, user_id)
+	err = a.segmentSvc.UpdateUserSegments(data, user_id)
 	if err != nil {
 		a.ErrorHandler(ctx, err)
 		return
 	}
-	ctx.IndentedJSON(
+	ctx.JSON(
 		http.StatusOK,
 		models.SuccessResponse{SuccessMsg: fmt.Sprintf("segment information for user with userID = %v updated", user_id)},
 	)
@@ -132,12 +133,12 @@ func (a *Adapter) getSegments(ctx *gin.Context) {
 		a.ErrorHandler(ctx, err)
 		return
 	}
-	segments, err := a.segmentSvc.GetUserSegments(ctx, user_id)
+	segments, err := a.segmentSvc.GetUserSegments(user_id)
 	if err != nil {
 		a.ErrorHandler(ctx, fmt.Errorf("database error: %w", err))
 		return
 	}
-	ctx.IndentedJSON(http.StatusOK, segments)
+	ctx.JSON(http.StatusOK, segments)
 }
 
 // @ID getReport
@@ -163,11 +164,12 @@ func (a *Adapter) getReport(ctx *gin.Context) {
 	ctx.Writer.Header().Set("Content-Disposition", "attachment;filename=data.csv")
 	wr := csv.NewWriter(ctx.Writer)
 
-	err = a.segmentSvc.GetReport(ctx, period, wr)
+	records, err := a.segmentSvc.GetReport(period)
 	if err != nil {
 		a.ErrorHandler(ctx, err)
 		return
 	}
+	wr.WriteAll(records)
 }
 
 // @ID getUserReport
@@ -199,14 +201,16 @@ func (a *Adapter) getUserReport(ctx *gin.Context) {
 	ctx.Writer.Header().Set("Content-Disposition", "attachment;filename=userdata.csv")
 	wr := csv.NewWriter(ctx.Writer)
 
-	err = a.segmentSvc.GetUserReport(ctx, period, user_id, wr)
+	records, err := a.segmentSvc.GetUserReport(period, user_id)
 	if err != nil {
 		a.ErrorHandler(ctx, err)
 		return
 	}
+	wr.WriteAll(records)
 }
 
 func (a *Adapter) getIdFromPath(ctx *gin.Context) (uuid.UUID, error) {
+	logger.Get().Debug("got parameter from path", "userID", ctx.Param("userID"))
 	if ctx.Param("userID") == ":userID" { // if path-parameter is not set (this is how it works in Postman)
 		return uuid.Nil, models.ErrBadRequest
 	}
@@ -219,6 +223,7 @@ func (a *Adapter) getIdFromPath(ctx *gin.Context) (uuid.UUID, error) {
 
 func (a *Adapter) getPeriodFromPath(ctx *gin.Context) (string, error) {
 	period := ctx.Param("period")
+	logger.Get().Debug("got parameter from path", "period", period)
 	if period == ":period" {
 		return "", models.ErrBadRequest
 	}
